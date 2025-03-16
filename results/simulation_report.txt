@@ -1,0 +1,18 @@
+VANET Secure Routing Simulation Report
+====================================
+
+Simulation Parameters:
+Number of vehicles: 50
+Number of malicious nodes: 5
+Simulation time: 300.0 seconds
+Area size: 1000.0x1000.0 meters
+Speed range: 20.0-50.0 km/h
+
+Final Statistics:
+Total messages sent: 12690
+Total messages received: 0
+Final packet delivery ratio: 0.00%
+Total attacks attempted: 89867
+Total attacks detected: 0
+Attack detection rate: 0.00%
+Final average trust score: 0.000
