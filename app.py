@@ -1,343 +1,389 @@
 import streamlit as st
-import time
-from vanet_simulation import Vehicle, VehicleType, simulate, plot_speeds, plot_positions
+import sys
+import os
+import json
 import matplotlib.pyplot as plt
-import io
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
 import numpy as np
 
-# Page configuration
-st.set_page_config(
-    page_title="VANET Secure Routing Simulation",
-    page_icon="🚗",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Add the project root directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Custom CSS for better styling
-st.markdown("""
-    <style>
-    .main {
-        padding: 1rem 2rem;
-    }
-    .title-container {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        padding: 2.5rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        text-align: center;
-        color: white;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .title-container h1 {
-        color: white !important;
-        font-size: 2.5em !important;
-        font-weight: 700 !important;
-        margin-bottom: 0.5rem !important;
-    }
-    .title-container p {
-        color: rgba(255, 255, 255, 0.9) !important;
-        font-size: 1.2em !important;
-    }
-    .feature-container {
-        background-color: white;
-        padding: 2rem;
-        border-radius: 15px;
-        border: 1px solid #e0e0e0;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .feature-container h2 {
-        color: #1e3c72;
-        font-size: 1.8em;
-        margin-bottom: 1rem;
-        font-weight: 600;
-    }
-    .feature-container h3 {
-        color: #2a5298;
-        font-size: 1.3em;
-        margin-bottom: 0.8rem;
-    }
-    .feature-container ul {
-        list-style-type: none;
-        padding-left: 0;
-    }
-    .feature-container ul li {
-        padding: 0.5rem 0;
-        color: #444;
-        font-size: 1.1em;
-    }
-    .feature-container ul li:before {
-        content: "→";
-        color: #2a5298;
-        font-weight: bold;
-        margin-right: 0.5rem;
-    }
-    .metric-container {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .metric-container h3 {
-        color: #1e3c72;
-        font-size: 1.2em;
-        margin-bottom: 0.5rem;
-    }
-    .stButton>button {
-        width: 100%;
-        background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
-        color: white;
-        padding: 0.8rem 1.5rem;
-        font-size: 1.2em;
-        font-weight: 600;
-        border: none;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        transform: translateY(-2px);
-    }
-    [data-testid="stMetricValue"] {
-        font-size: 1.8em !important;
-        color: #1e3c72 !important;
-        font-weight: 600 !important;
-    }
-    [data-testid="stMetricLabel"] {
-        font-size: 1em !important;
-        color: #666 !important;
-    }
-    .stProgress > div > div > div {
-        background-color: #2a5298;
-    }
-    .sidebar .sidebar-content {
-        background-color: #f8f9fa;
-    }
-    </style>
-""", unsafe_allow_html=True)
+from src.simulation.vanet_sim import VANETSimulation, SimulationConfig
 
-# Title Section
-st.markdown("""
-    <div class="title-container">
-        <h1>🚗 VANET Secure Routing Simulation</h1>
-        <p>
-            A Real-time Vehicular Ad-hoc Network Simulation with Advanced Security Features
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+# Set matplotlib style
+plt.style.use('dark_background')
 
-# Introduction
-st.markdown("""
-    <div class="feature-container">
-        <h2>🎯 Project Overview</h2>
-        <p style='font-size: 1.2em; color: #444; line-height: 1.6;'>
-            This simulation demonstrates a state-of-the-art approach to secure vehicular communication in smart cities. 
-            Using advanced cryptographic techniques and trust mechanisms, we simulate how vehicles can safely exchange 
-            information while protecting against various cyber threats.
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+def create_comparative_analysis_section(simulation):
+    """Create the comparative analysis section in the Streamlit app"""
+    st.header("📊 Comparative Analysis")
+    
+    # Generate comparison report
+    report = json.loads(simulation.generate_comparative_report('json'))
+    
+    # Display overall scores
+    st.subheader("Overall System Scores")
+    scores_df = pd.DataFrame({
+        'System': list(report['overall_scores'].keys()),
+        'Score': list(report['overall_scores'].values())
+    })
+    
+    fig = px.bar(scores_df, x='System', y='Score', 
+                 title='Overall System Scores',
+                 color='Score',
+                 color_continuous_scale='Viridis',
+                 template='plotly_dark')
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#ffffff')
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Display detailed metrics
+    st.subheader("Detailed System Metrics")
+    metrics_df = pd.DataFrame(report['systems']).T
+    metrics_df.index.name = 'System'
+    st.dataframe(metrics_df.style.background_gradient(cmap='viridis', axis=None))
+    
+    # Display comparative advantages
+    st.subheader("VANET Guardian Advantages")
+    for advantage in report['comparative_analysis']['VANET Guardian']:
+        st.success(advantage)
+    
+    # Display radar chart for main metrics
+    st.subheader("Main Metrics Comparison")
+    main_metrics = ['security', 'performance', 'visualization', 'features', 'ux']
+    radar_data = []
+    
+    for system in report['systems']:
+        values = [report['systems'][system][metric] for metric in main_metrics]
+        radar_data.append({
+            'System': system,
+            'Metric': main_metrics,
+            'Value': values
+        })
+    
+    radar_df = pd.DataFrame(radar_data)
+    radar_df = radar_df.explode(['Metric', 'Value'])
+    
+    fig = px.line_polar(radar_df, r='Value', theta='Metric', 
+                       line_close=True, color='System',
+                       title='Main Metrics Radar Chart',
+                       template='plotly_dark')
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#ffffff')
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-# Key Features Section
-st.markdown("""
-    <div class="feature-container">
-        <h2>✨ Key Features</h2>
-        <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;'>
-            <div>
-                <h3>🔐 Security</h3>
+def create_simulation_section():
+    """Create the simulation section in the Streamlit app"""
+    st.header("🚗 VANET Guardian Simulation")
+    
+    # Simulation parameters
+    st.subheader("Simulation Parameters")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        num_vehicles = st.slider("Number of Vehicles", 10, 100, 50)
+        num_malicious = st.slider("Number of Malicious Vehicles", 0, 20, 5)
+        sim_time = st.slider("Simulation Time (seconds)", 60, 600, 300)
+    
+    with col2:
+        area_size = st.slider("Area Size (meters)", 500, 2000, 1000)
+        min_speed = st.slider("Minimum Speed (km/h)", 10, 40, 20)
+        max_speed = st.slider("Maximum Speed (km/h)", 30, 80, 50)
+    
+    beacon_interval = st.slider("Beacon Interval (seconds)", 0.5, 5.0, 1.0, 0.5)
+    communication_range = st.slider("Communication Range (meters)", 100, 500, 200)
+    
+    # Run simulation button
+    if st.button("Run Simulation"):
+        with st.spinner("Running simulation..."):
+            # Initialize simulation
+            config = SimulationConfig(
+                num_vehicles=num_vehicles,
+                num_malicious=num_malicious,
+                sim_time=sim_time,
+                area_size=area_size,
+                min_speed=min_speed,
+                max_speed=max_speed,
+                beacon_interval=beacon_interval,
+                communication_range=communication_range
+            )
+            
+            simulation = VANETSimulation(config)
+            simulation.run()
+            
+            # Display simulation results
+            st.subheader("Simulation Results")
+            
+            # Create tabs for different visualizations
+            tab1, tab2, tab3 = st.tabs(["Performance Metrics", "Vehicle Movement", "Comparative Analysis"])
+            
+            with tab1:
+                # Performance metrics plots
+                fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+                
+                # Set colors for plots
+                colors = ['#00ff00', '#00ffff', '#ff0000', '#ffff00']
+                
+                # Packet Delivery Ratio
+                axes[0, 0].plot(np.linspace(0, config.sim_time, len(simulation.stats['packet_delivery_ratio'])),
+                              simulation.stats['packet_delivery_ratio'], color=colors[0])
+                axes[0, 0].set_title('Packet Delivery Ratio', color='#ffffff')
+                axes[0, 0].set_xlabel('Time (s)', color='#ffffff')
+                axes[0, 0].set_ylabel('PDR', color='#ffffff')
+                
+                # Message Statistics
+                axes[0, 1].plot(np.linspace(0, config.sim_time, len(simulation.stats['messages_sent'])),
+                              simulation.stats['messages_sent'], label='Sent', color=colors[1])
+                axes[0, 1].plot(np.linspace(0, config.sim_time, len(simulation.stats['messages_received'])),
+                              simulation.stats['messages_received'], label='Received', color=colors[2])
+                axes[0, 1].set_title('Message Statistics', color='#ffffff')
+                axes[0, 1].set_xlabel('Time (s)', color='#ffffff')
+                axes[0, 1].set_ylabel('Number of Messages', color='#ffffff')
+                axes[0, 1].legend()
+                
+                # Attack Statistics
+                axes[1, 0].plot(np.linspace(0, config.sim_time, len(simulation.stats['attacks_attempted'])),
+                              simulation.stats['attacks_attempted'], label='Attempted', color=colors[2])
+                axes[1, 0].plot(np.linspace(0, config.sim_time, len(simulation.stats['attacks_detected'])),
+                              simulation.stats['attacks_detected'], label='Detected', color=colors[3])
+                axes[1, 0].set_title('Attack Statistics', color='#ffffff')
+                axes[1, 0].set_xlabel('Time (s)', color='#ffffff')
+                axes[1, 0].set_ylabel('Number of Attacks', color='#ffffff')
+                axes[1, 0].legend()
+                
+                # Trust Scores
+                axes[1, 1].plot(np.linspace(0, config.sim_time, len(simulation.stats['trust_scores'])),
+                              simulation.stats['trust_scores'], color=colors[0])
+                axes[1, 1].set_title('Average Trust Scores', color='#ffffff')
+                axes[1, 1].set_xlabel('Time (s)', color='#ffffff')
+                axes[1, 1].set_ylabel('Trust Score', color='#ffffff')
+                
+                # Set background color for all subplots
+                for ax in axes.flat:
+                    ax.set_facecolor('#000000')
+                    ax.grid(True, linestyle='--', alpha=0.3)
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+            
+            with tab2:
+                # Vehicle movement visualization
+                st.subheader("Vehicle Movement")
+                # Create a scatter plot of vehicle positions
+                positions = []
+                for vehicle in simulation.vehicles.values():
+                    positions.append({
+                        'Vehicle ID': vehicle.id,
+                        'X': vehicle.position.x,
+                        'Y': vehicle.position.y,
+                        'Type': 'Malicious' if vehicle.is_malicious else 'Normal'
+                    })
+                
+                positions_df = pd.DataFrame(positions)
+                fig = px.scatter(positions_df, x='X', y='Y', 
+                               color='Type', hover_data=['Vehicle ID'],
+                               title='Vehicle Positions',
+                               template='plotly_dark',
+                               color_discrete_map={'Normal': '#00ff00', 'Malicious': '#ff0000'})
+                fig.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#ffffff')
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with tab3:
+                # Display comparative analysis
+                create_comparative_analysis_section(simulation)
+
+def main():
+    st.set_page_config(
+        page_title="VANET Guardian",
+        page_icon="🚗",
+        layout="wide"
+    )
+    
+    # Custom CSS
+    st.markdown("""
+        <style>
+        .stApp {
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .stButton>button {
+            background-color: #00ff00;
+            color: #000000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .stButton>button:hover {
+            background-color: #00cc00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,255,0,0.2);
+        }
+        .stSlider>div>div>div {
+            background-color: #00ff00;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 2px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            padding: 10px 16px;
+            color: #ffffff;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #00ff00;
+            color: #000000;
+        }
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+            color: #ffffff;
+        }
+        .stSuccess {
+            background-color: #1a1a1a;
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        .feature-box {
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            border: 1px solid #00ff00;
+        }
+        .project-links {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .project-link {
+            background-color: #1a1a1a;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            transition: all 0.3s ease;
+        }
+        .project-link:hover {
+            background-color: #00ff00;
+            color: #000000;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Title and description
+    st.title("🚗 VANET Guardian")
+    st.markdown("""
+        ### Secure Vehicle Communication Simulator
+        A comprehensive platform for simulating and analyzing secure vehicle-to-vehicle communication in VANETs.
+    """)
+    
+    # Project Links
+    st.markdown("""
+        <div class="project-links">
+            <a href="https://github.com/parthHule/-VANET-Guardian-Secure-Vehicle-Communication-Simulator-" class="project-link">GitHub Repository</a>
+            <a href="https://drive.google.com/drive/folders/1l7MZqFxpDW18HZCllAbMCUrZf5Z0HcSL" class="project-link">Project Drive</a>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Key Features
+    st.header("✨ Key Features")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>🔒 Security Features</h3>
                 <ul>
-                    <li>HMAC Authentication</li>
-                    <li>Trust Scoring System</li>
-                    <li>Attack Detection</li>
+                    <li>Advanced encryption protocols</li>
+                    <li>Real-time attack detection</li>
+                    <li>Secure message routing</li>
+                    <li>Trust-based authentication</li>
                 </ul>
             </div>
-            <div>
-                <h3>🚦 Vehicle Types</h3>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+            <div class="feature-box">
+                <h3>🚗 Vehicle Management</h3>
                 <ul>
-                    <li>Emergency Vehicles</li>
-                    <li>Public Transport</li>
-                    <li>Regular Vehicles</li>
+                    <li>Dynamic vehicle tracking</li>
+                    <li>Real-time position monitoring</li>
+                    <li>Speed and trajectory analysis</li>
+                    <li>Vehicle behavior modeling</li>
                 </ul>
             </div>
-            <div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+            <div class="feature-box">
                 <h3>📊 Real-time Metrics</h3>
                 <ul>
-                    <li>Packet Delivery Ratio</li>
-                    <li>Attack Detection Rate</li>
-                    <li>Trust Scores</li>
+                    <li>Performance monitoring</li>
+                    <li>Security statistics</li>
+                    <li>Network efficiency metrics</li>
+                    <li>System health tracking</li>
                 </ul>
             </div>
-            <div>
-                <h3>🛡️ Safety Features</h3>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("""
+            <div class="feature-box">
+                <h3>🎯 Target Users</h3>
                 <ul>
-                    <li>Collision Detection</li>
-                    <li>Route Optimization</li>
-                    <li>Speed Management</li>
+                    <li>Researchers</li>
+                    <li>Security analysts</li>
+                    <li>Network engineers</li>
+                    <li>Students</li>
                 </ul>
             </div>
+        """, unsafe_allow_html=True)
+    
+    # Technologies Used
+    st.header("🛠️ Technologies Used")
+    st.markdown("""
+        <div class="feature-box">
+            <ul>
+                <li>Python 3.x</li>
+                <li>Streamlit</li>
+                <li>Matplotlib</li>
+                <li>Plotly</li>
+                <li>Pandas</li>
+                <li>NumPy</li>
+            </ul>
         </div>
-    </div>
-""", unsafe_allow_html=True)
-
-# Sidebar Configuration
-st.sidebar.markdown("""
-    <div style='text-align: center; padding: 1rem;'>
-        <h2>⚙️ Simulation Controls</h2>
-    </div>
-""", unsafe_allow_html=True)
-
-st.sidebar.markdown("---")
-st.sidebar.header("Vehicle Parameters")
-num_vehicles = st.sidebar.slider("🚗 Number of Vehicles", 2, 10, 4)
-num_steps = st.sidebar.slider("⏱️ Simulation Steps", 20, 200, 50)
-dt = st.sidebar.number_input("🕐 Time Step (dt)", 0.1, 1.0, 0.1)
-
-st.sidebar.markdown("---")
-st.sidebar.header("Vehicle Distribution")
-emergency_pct = st.sidebar.slider("🚑 Emergency Vehicles %", 0, 100, 25)
-public_transport_pct = st.sidebar.slider("🚌 Public Transport %", 0, 100, 25)
-
-# Initialize metrics placeholders
-if 'metrics' not in st.session_state:
-    st.session_state.metrics = {
-        'pdr': 0.0,
-        'messages': 0,
-        'attack_rate': 0.0,
-        'trust_score': 0.0
-    }
-
-# Metrics Display Section
-st.markdown("<div class='metric-container'>", unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown("### 📡 PDR")
-    pdr_metric = st.metric("Packet Delivery Ratio", f"{st.session_state.metrics['pdr']:.2%}")
-with col2:
-    st.markdown("### 📨 Messages")
-    msg_metric = st.metric("Messages Received", st.session_state.metrics['messages'])
-with col3:
-    st.markdown("### 🛡️ Security")
-    attack_metric = st.metric("Attack Detection Rate", f"{st.session_state.metrics['attack_rate']:.2%}")
-with col4:
-    st.markdown("### ⭐ Trust")
-    trust_metric = st.metric("Average Trust Score", f"{st.session_state.metrics['trust_score']:.2f}")
-st.markdown("</div>", unsafe_allow_html=True)
-
-# Simulation Control
-st.markdown("""
-    <div class='feature-container'>
-        <h2>▶️ Simulation Control</h2>
-    </div>
-""", unsafe_allow_html=True)
-start_button = st.button("Start Simulation")
-
-# Rest of your existing simulation code
-if start_button:
-    # Create progress bar
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    """, unsafe_allow_html=True)
     
-    # Create vehicles based on distribution
-    vehicles = []
-    for i in range(num_vehicles):
-        rand_val = np.random.random() * 100
-        if rand_val < emergency_pct:
-            v_type = VehicleType.EMERGENCY
-        elif rand_val < emergency_pct + public_transport_pct:
-            v_type = VehicleType.PUBLIC_TRANSPORT
-        else:
-            v_type = VehicleType.REGULAR
-            
-        vehicles.append(Vehicle(
-            f"V{i+1}",
-            speed=np.random.uniform(30, 80),
-            position=(np.random.uniform(0, 100), np.random.uniform(0, 100)),
-            vehicle_type=v_type
-        ))
+    # Educational Value
+    st.header("📚 Educational Value")
+    st.markdown("""
+        <div class="feature-box">
+            <ul>
+                <li>Hands-on VANET security experience</li>
+                <li>Real-world attack simulation</li>
+                <li>Network performance analysis</li>
+                <li>Security protocol implementation</li>
+            </ul>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # Create placeholder for plots
-    plot_container = st.empty()
-    
-    # Run simulation
-    for step in range(num_steps):
-        # Update progress
-        progress = (step + 1) / num_steps
-        progress_bar.progress(progress)
-        status_text.text(f"Running simulation... Step {step + 1}/{num_steps}")
-        
-        # Run one step of simulation
-        metrics = simulate(vehicles, dt, 1)
-        current_metrics = metrics[0]
-        
-        # Update metrics
-        st.session_state.metrics['pdr'] = current_metrics['pdr']
-        st.session_state.metrics['messages'] = current_metrics['valid_messages']
-        st.session_state.metrics['attack_rate'] = current_metrics['attack_detection_rate']
-        st.session_state.metrics['trust_score'] = current_metrics['avg_trust']
-        
-        # Update metrics display
-        col1.metric("Packet Delivery Ratio", f"{current_metrics['pdr']:.2%}")
-        col2.metric("Messages Received", current_metrics['valid_messages'])
-        col3.metric("Attack Detection Rate", f"{current_metrics['attack_detection_rate']:.2%}")
-        col4.metric("Average Trust Score", f"{current_metrics['avg_trust']:.2f}")
-        
-        # Create and update plots
-        fig = plt.figure(figsize=(15, 10))
-        
-        # Speed plot
-        plt.subplot(2, 1, 1)
-        for vehicle in vehicles:
-            color = {
-                VehicleType.EMERGENCY: 'red',
-                VehicleType.PUBLIC_TRANSPORT: 'green',
-                VehicleType.REGULAR: 'blue'
-            }[vehicle.vehicle_type]
-            plt.plot([step], [vehicle.speed], 'o', color=color, 
-                    label=f"{vehicle.id} ({vehicle.vehicle_type.value})")
-        plt.title("Vehicle Speeds")
-        plt.xlabel("Time Step")
-        plt.ylabel("Speed (m/s)")
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.grid(True, alpha=0.3)
-        
-        # Position plot
-        plt.subplot(2, 1, 2)
-        for vehicle in vehicles:
-            color = {
-                VehicleType.EMERGENCY: 'red',
-                VehicleType.PUBLIC_TRANSPORT: 'green',
-                VehicleType.REGULAR: 'blue'
-            }[vehicle.vehicle_type]
-            plt.plot(vehicle.position[0], vehicle.position[1], 'o', color=color,
-                    label=f"{vehicle.id} ({vehicle.vehicle_type.value})")
-        plt.title("Vehicle Positions")
-        plt.xlabel("X Position")
-        plt.ylabel("Y Position")
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        plt.grid(True, alpha=0.3)
-        plt.axis('equal')
-        
-        plt.tight_layout()
-        
-        # Convert plot to image and display
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight')
-        buf.seek(0)
-        plot_container.image(buf)
-        plt.close()
-        
-        # Small delay to make visualization smoother
-        time.sleep(0.1)
-    
-    status_text.text("Simulation completed!")
+    # Create simulation section
+    st.header("🚀 Start Simulation")
+    create_simulation_section()
 
-# Footer with enhanced styling
-st.markdown("""
-    <div style='margin-top: 3rem; text-align: center; padding: 2rem; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 15px; color: white;'>
-        <p style='font-size: 1.2em; margin-bottom: 0.5rem;'>Developed as part of Advanced VANET Security Research</p>
-        <p style='font-size: 0.9em; opacity: 0.9;'>© 2024 All rights reserved</p>
-    </div>
-""", unsafe_allow_html=True) 
+if __name__ == "__main__":
+    main() 

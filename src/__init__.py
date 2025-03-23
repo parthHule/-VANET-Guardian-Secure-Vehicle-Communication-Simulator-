@@ -1,3 +1,3 @@
 """
-VANET Secure Routing Protocol Implementation
+VANET Guardian: Secure Vehicle Communication Simulator
 """ 

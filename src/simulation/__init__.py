@@ -1,3 +1,3 @@
 """
-Simulation package for VANET protocol
+Simulation module for VANET Guardian
 """ 

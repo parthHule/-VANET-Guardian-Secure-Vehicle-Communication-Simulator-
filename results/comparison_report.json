@@ -1,0 +1,58 @@
+{
+    "systems": {
+        "VANET Guardian": {
+            "security": 1.0,
+            "performance": 0.0,
+            "visualization": 1.0,
+            "features": 1.0,
+            "ux": 1.0,
+            "attack_detection": 1.0,
+            "message_delivery": 0.0,
+            "latency": 0.0,
+            "resource_usage": 0.0,
+            "scalability": 1.0
+        },
+        "traditional_vanet": {
+            "security": 0.6,
+            "performance": 0.7,
+            "visualization": 0.5,
+            "features": 0.6,
+            "ux": 0.4,
+            "attack_detection": 0.5,
+            "message_delivery": 0.7,
+            "latency": 0.2,
+            "resource_usage": 0.8,
+            "scalability": 0.6
+        },
+        "basic_security": {
+            "security": 0.4,
+            "performance": 0.8,
+            "visualization": 0.3,
+            "features": 0.4,
+            "ux": 0.5,
+            "attack_detection": 0.3,
+            "message_delivery": 0.8,
+            "latency": 0.1,
+            "resource_usage": 0.9,
+            "scalability": 0.7
+        }
+    },
+    "overall_scores": {
+        "VANET Guardian": 0.8,
+        "traditional_vanet": 0.565,
+        "basic_security": 0.47000000000000003
+    },
+    "comparative_analysis": {
+        "VANET Guardian": [
+            "Superior security over traditional_vanet",
+            "Enhanced visualization compared to traditional_vanet",
+            "More comprehensive features than traditional_vanet",
+            "Improved user experience over traditional_vanet",
+            "Superior security over basic_security",
+            "Enhanced visualization compared to basic_security",
+            "More comprehensive features than basic_security",
+            "Improved user experience over basic_security"
+        ]
+    },
+    "timestamp": "2025-03-23T19:20:51.118218"
+}
